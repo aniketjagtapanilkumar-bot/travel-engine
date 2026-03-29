@@ -42,22 +42,29 @@ async function getCoordinates(city) {
   }
 }
 
-// ---------------- WEATHER (FIXED) ----------------
 async function getWeather(lat, lon) {
   try {
     if (!lat || !lon) return null;
 
-    const res = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`
-    );
+    const url = `https://api.open-meteo.com/v1/forecast`;
 
-    const data = await res.json();
+    const res = await axios.get(url, {
+      params: {
+        latitude: lat,
+        longitude: lon,
+        current_weather: true
+      },
+      timeout: 5000
+    });
+
+    const data = res.data;
 
     if (!data.current_weather) return null;
 
     return data.current_weather.temperature;
+
   } catch (err) {
-    console.log("Weather error:", err);
+    console.log("Weather error:", err.message);
     return null;
   }
 }
