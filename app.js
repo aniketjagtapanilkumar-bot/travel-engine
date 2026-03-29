@@ -42,15 +42,22 @@ async function getCoordinates(city) {
   }
 }
 
-// ---------------- WEATHER ----------------
+// ---------------- WEATHER (FIXED) ----------------
 async function getWeather(lat, lon) {
   try {
+    if (!lat || !lon) return null;
+
     const res = await fetch(
       `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`
     );
+
     const data = await res.json();
+
+    if (!data.current_weather) return null;
+
     return data.current_weather.temperature;
-  } catch {
+  } catch (err) {
+    console.log("Weather error:", err);
     return null;
   }
 }
@@ -89,13 +96,26 @@ app.post("/step1", async (req, res) => {
   const { city, people } = req.body;
 
   const origin = await getCoordinates(city);
-
   if (!origin) return res.json({ error: "City not found" });
 
   const results = await Promise.all(data.map(async p => {
-    const dist = getDistance(origin.lat, origin.lon, p.lat, p.lon);
+
+    // ✅ Ensure coordinates exist
+    let lat = p.lat;
+    let lon = p.lon;
+
+    if (!lat || !lon) {
+      const coords = await getCoordinates(p.name);
+      if (coords) {
+        lat = coords.lat;
+        lon = coords.lon;
+      }
+    }
+
+    const dist = getDistance(origin.lat, origin.lon, lat, lon);
     const t = getTravelOptions(dist, people, p.flightFactor || 1);
-    const temp = await getWeather(p.lat, p.lon);
+
+    const temp = await getWeather(lat, lon);
 
     return {
       name: p.name,
@@ -137,6 +157,12 @@ app.post("/step2", (req, res) => {
 
       let score = costScore * 0.5 + timeScore * 0.5;
 
+      // ✅ WEATHER IMPACT (NEW)
+      if (r.temperature !== null) {
+        if (r.temperature > 35) score -= 0.2;
+        if (r.temperature >= 20 && r.temperature <= 30) score += 0.2;
+      }
+
       if (r.distance > 800 && m.name === "flight") score += 0.25;
       if (r.distance < 300 && m.name === "bus") score += 0.2;
       if (days <= 2 && m.name === "flight") score += 0.2;
@@ -171,8 +197,8 @@ app.post("/step3", (req, res) => {
   });
 
   results.sort((a, b) => {
-    const scoreA = (1 / a.bestCost) + (1 / a.bestTime);
-    const scoreB = (1 / b.bestCost) + (1 / b.bestTime);
+    const scoreA = (0.6 * (1 / a.bestCost)) + (0.4 * (1 / a.bestTime));
+    const scoreB = (0.6 * (1 / b.bestCost)) + (0.4 * (1 / b.bestTime));
     return scoreB - scoreA;
   });
 
@@ -183,5 +209,5 @@ app.post("/step3", (req, res) => {
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log("Server running");
+  console.log("Server running on port", PORT);
 });
