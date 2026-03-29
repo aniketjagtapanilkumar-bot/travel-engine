@@ -47,7 +47,7 @@ async function getCoordinates(city) {
   }
 }
 
-// ---------------- WEATHER (FINAL FIX) ----------------
+// ---------------- WEATHER ----------------
 async function getWeather(lat, lon) {
   try {
     if (!lat || !lon) return 25; // fallback
@@ -70,7 +70,7 @@ async function getWeather(lat, lon) {
 
   } catch (err) {
     console.log("Weather error:", err.message);
-    return 25; // fallback so UI never breaks
+    return 25; // fallback
   }
 }
 
@@ -115,7 +115,6 @@ app.post("/step1", async (req, res) => {
     let lat = p.lat;
     let lon = p.lon;
 
-    // fallback if missing
     if (!lat || !lon) {
       const coords = await getCoordinates(p.name);
       if (coords) {
@@ -168,7 +167,7 @@ app.post("/step2", (req, res) => {
 
       let score = costScore * 0.5 + timeScore * 0.5;
 
-      // 🌦 WEATHER IMPACT
+      // 🌦 weather logic
       if (r.temperature > 35) score -= 0.2;
       if (r.temperature >= 20 && r.temperature <= 30) score += 0.2;
 
