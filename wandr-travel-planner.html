@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wandr — AI Travel Planner</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #0e0c09; --bg2: #161310; --bg3: #1e1a14;
+      --gold: #c9943a; --gold2: #e8b968;
+      --cream: #f0e8d8; --cream2: #c8b89a; --cream3: #8a7a62;
+      --border: rgba(201,148,58,0.15); --border2: rgba(201,148,58,0.35);
+      --serif: 'Playfair Display', Georgia, serif;
+      --sans: 'DM Sans', system-ui, sans-serif;
+      --radius: 12px;
+    }
+    body { background: var(--bg); color: var(--cream); font-family: var(--sans); min-height: 100vh; overflow-x: hidden; }
+
+    /* ── Screen system ── */
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    /* ── INPUT SCREEN ── */
+    .input-screen { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 24px; position: relative; overflow: hidden; }
+    .input-screen::before { content: ''; position: absolute; width: 700px; height: 700px; background: radial-gradient(circle, rgba(201,148,58,0.07) 0%, transparent 65%); top: -150px; left: 50%; transform: translateX(-50%); pointer-events: none; }
+    .input-screen::after { content: ''; position: absolute; width: 500px; height: 500px; background: radial-gradient(circle, rgba(201,148,58,0.05) 0%, transparent 70%); bottom: -100px; right: -100px; pointer-events: none; }
+    .logo { font-family: var(--serif); font-size: 13px; letter-spacing: 8px; text-transform: uppercase; color: var(--gold); margin-bottom: 20px; }
+    .hero-title { font-family: var(--serif); font-size: clamp(40px, 6vw, 68px); font-weight: 400; line-height: 1.1; text-align: center; margin-bottom: 14px; }
+    .hero-title em { font-style: italic; color: var(--gold2); }
+    .hero-subtitle { font-size: 15px; color: var(--cream3); text-align: center; margin-bottom: 52px; font-weight: 300; letter-spacing: 0.3px; }
+    .form-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 36px; width: 100%; max-width: 560px; position: relative; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+    .field { display: flex; flex-direction: column; gap: 8px; }
+    .field.full { grid-column: 1 / -1; }
+    label { font-size: 10px; letter-spacing: 2.5px; text-transform: uppercase; color: var(--gold); font-weight: 500; }
+    input, select { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; color: var(--cream); font-family: var(--sans); font-size: 15px; padding: 12px 16px; outline: none; width: 100%; appearance: none; -webkit-appearance: none; transition: border-color 0.2s; }
+    input::placeholder { color: var(--cream3); }
+    input:focus, select:focus { border-color: var(--gold); }
+    select option { background: #1e1a14; }
+    .budget-wrap { display: flex; gap: 8px; }
+    .currency-select { width: 90px; flex-shrink: 0; }
+    .submit-btn { width: 100%; background: var(--gold); color: var(--bg); border: none; border-radius: 8px; padding: 16px 24px; font-family: var(--sans); font-size: 15px; font-weight: 500; letter-spacing: 0.5px; cursor: pointer; transition: all 0.2s; }
+    .submit-btn:hover { background: var(--gold2); transform: translateY(-1px); }
+    .submit-btn:active { transform: translateY(0); }
+    .error-msg { background: rgba(200,50,50,0.1); border: 1px solid rgba(200,50,50,0.3); border-radius: 8px; padding: 12px 16px; font-size: 14px; color: #f08080; margin-top: 16px; display: none; }
+
+    /* ── LOADING SCREEN ── */
+    .loading-screen { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; }
+    .loading-gem { font-family: var(--serif); font-size: 48px; color: var(--gold); animation: gemPulse 2s ease-in-out infinite; }
+    @keyframes gemPulse { 0%,100% { opacity:.3; transform:scale(0.9); } 50% { opacity:1; transform:scale(1.05); } }
+    .loading-text { font-size: 13px; color: var(--cream3); letter-spacing: 2px; text-transform: uppercase; transition: opacity 0.3s; }
+    .loading-dots { display: flex; gap: 8px; }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); animation: dotBounce 1.4s ease-in-out infinite; }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes dotBounce { 0%,80%,100% { opacity:.2; transform:scale(.8); } 40% { opacity:1; transform:scale(1.3); } }
+    .loading-steps { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+    .loading-step { font-size: 12px; color: var(--cream3); opacity: 0; transform: translateX(-10px); transition: all 0.4s; display: flex; align-items: center; gap: 8px; }
+    .loading-step.done { opacity: 0.5; transform: translateX(0); }
+    .loading-step.done::before { content: '✓'; color: var(--gold); font-size: 11px; }
+    .loading-step:not(.done)::before { content: '◦'; color: var(--cream3); font-size: 11px; }
+
+    /* ── RESULTS SCREEN ── */
+    .results-screen { min-height: 100vh; padding: 56px 24px; }
+    .results-header { max-width: 1100px; margin: 0 auto 44px; display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+    .results-eyebrow { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--gold); margin-bottom: 8px; }
+    .results-title { font-family: var(--serif); font-size: clamp(28px, 4vw, 40px); font-weight: 400; }
+    .results-title span { color: var(--gold2); font-style: italic; }
+    .back-btn { background: transparent; border: 1px solid var(--border2); border-radius: 8px; color: var(--cream2); font-family: var(--sans); font-size: 13px; padding: 8px 16px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+    .back-btn:hover { border-color: var(--gold); color: var(--gold); }
+    .cards-grid { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+
+    /* Destination Card */
+    .dest-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; cursor: pointer; transition: border-color 0.3s, transform 0.3s; animation: cardIn 0.5s ease both; }
+    @keyframes cardIn { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+    .dest-card:nth-child(1) { animation-delay: 0.05s; }
+    .dest-card:nth-child(2) { animation-delay: 0.1s; }
+    .dest-card:nth-child(3) { animation-delay: 0.15s; }
+    .dest-card:nth-child(4) { animation-delay: 0.2s; }
+    .dest-card:nth-child(5) { animation-delay: 0.25s; }
+    .dest-card:hover { border-color: var(--border2); transform: translateY(-5px); }
+    .card-hero { height: 155px; position: relative; overflow: hidden; }
+    .card-hero-bg { width: 100%; height: 100%; }
+    .card-overlay { position: absolute; bottom: 0; left: 0; right: 0; height: 70%; background: linear-gradient(to top, var(--bg2) 0%, transparent 100%); }
+    .card-country-badge { position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.45); border-radius: 20px; padding: 4px 12px; font-size: 11px; color: var(--cream2); border: 1px solid rgba(255,255,255,0.08); backdrop-filter: blur(4px); }
+    .card-body { padding: 18px 20px 20px; }
+    .card-name { font-family: var(--serif); font-size: 26px; font-weight: 400; margin-bottom: 4px; }
+    .card-tagline { font-size: 13px; color: var(--cream3); margin-bottom: 14px; font-style: italic; }
+    .card-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+    .tag { background: rgba(201,148,58,0.1); border: 1px solid rgba(201,148,58,0.2); border-radius: 20px; padding: 3px 10px; font-size: 11px; color: var(--gold2); text-transform: capitalize; }
+    .card-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 14px; border-top: 1px solid var(--border); }
+    .card-hint { font-size: 12px; color: var(--cream3); }
+    .explore-btn { background: transparent; border: 1px solid var(--gold); border-radius: 6px; color: var(--gold); font-family: var(--sans); font-size: 12px; padding: 6px 14px; cursor: pointer; transition: all 0.2s; }
+    .explore-btn:hover { background: var(--gold); color: var(--bg); }
+
+    /* ── DETAIL SCREEN ── */
+    .detail-screen { min-height: 100vh; }
+    .detail-hero { height: 300px; position: relative; display: flex; align-items: flex-end; padding: 36px 40px; overflow: hidden; }
+    .detail-hero-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(14,12,9,0.97) 0%, rgba(14,12,9,0.3) 55%, rgba(14,12,9,0.1) 100%); }
+    .detail-hero-back { position: absolute; top: 20px; left: 24px; z-index: 3; }
+    .detail-hero-content { position: relative; z-index: 2; }
+    .detail-country { font-size: 11px; letter-spacing: 4px; text-transform: uppercase; color: var(--gold2); margin-bottom: 8px; }
+    .detail-name { font-family: var(--serif); font-size: clamp(36px, 5vw, 60px); font-weight: 400; line-height: 1; margin-bottom: 10px; }
+    .detail-tagline { font-size: 16px; color: var(--cream2); font-style: italic; }
+    .detail-content { padding: 36px 40px; max-width: 980px; margin: 0 auto; }
+    .desc-text { font-size: 15px; color: var(--cream2); line-height: 1.85; margin-bottom: 40px; }
+    .season-pill { display: inline-flex; align-items: center; gap: 8px; background: rgba(201,148,58,0.1); border: 1px solid rgba(201,148,58,0.2); border-radius: 24px; padding: 6px 16px; font-size: 12px; color: var(--gold2); margin-bottom: 32px; }
+
+    /* Section headings */
+    .section-head { font-family: var(--serif); font-size: 22px; font-weight: 400; margin-bottom: 20px; display: flex; align-items: center; gap: 14px; }
+    .section-head::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .detail-section { margin-bottom: 48px; }
+
+    /* Transport */
+    .transport-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .transport-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 20px 16px; text-align: center; }
+    .transport-icon { font-size: 22px; margin-bottom: 8px; }
+    .transport-mode { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--cream3); margin-bottom: 12px; }
+    .transport-cost { font-family: var(--serif); font-size: 26px; color: var(--gold2); margin-bottom: 4px; }
+    .transport-duration { font-size: 13px; color: var(--cream3); margin-bottom: 5px; }
+    .transport-note { font-size: 11px; color: var(--cream3); font-style: italic; }
+    .transport-na { opacity: 0.35; }
+    .transport-na .transport-cost { font-size: 14px; }
+
+    /* Hotels */
+    .hotel-tabs { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+    .hotel-tab { background: transparent; border: 1px solid var(--border); border-radius: 6px; color: var(--cream3); font-family: var(--sans); font-size: 13px; padding: 8px 16px; cursor: pointer; transition: all 0.2s; }
+    .hotel-tab.active { background: rgba(201,148,58,0.12); border-color: var(--gold); color: var(--gold2); }
+    .hotel-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 24px 28px; display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+    .hotel-amount { font-family: var(--serif); font-size: 38px; color: var(--gold2); }
+    .hotel-label { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--cream3); margin-bottom: 8px; }
+    .hotel-nights { font-size: 13px; color: var(--cream3); margin-top: 8px; }
+    .hotel-examples-label { font-size: 11px; color: var(--cream3); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
+    .hotel-example { font-size: 14px; color: var(--cream2); margin-bottom: 3px; }
+    .hotel-examples { text-align: right; }
+
+    /* Places list */
+    .list-items { display: flex; flex-direction: column; gap: 10px; }
+    .list-item { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; display: flex; align-items: flex-start; gap: 14px; }
+    .item-num { font-family: var(--serif); font-size: 22px; color: var(--gold); opacity: 0.45; min-width: 22px; line-height: 1.2; flex-shrink: 0; }
+    .item-body { flex: 1; }
+    .item-name { font-size: 15px; font-weight: 500; color: var(--cream); margin-bottom: 4px; }
+    .item-desc { font-size: 13px; color: var(--cream3); line-height: 1.55; }
+    .item-meta { text-align: right; flex-shrink: 0; }
+    .item-badge { background: rgba(255,255,255,0.05); border-radius: 4px; padding: 3px 8px; font-size: 11px; color: var(--cream3); text-transform: capitalize; }
+    .item-fee { font-size: 12px; color: var(--cream3); margin-top: 5px; }
+    .item-rating { font-size: 14px; color: var(--gold2); }
+    .item-price { font-size: 13px; color: var(--cream3); margin-top: 2px; }
+    .item-try { font-size: 11px; color: var(--cream3); font-style: italic; margin-top: 4px; }
+
+    /* Insider tip */
+    .insider-box { background: rgba(201,148,58,0.07); border: 1px solid rgba(201,148,58,0.2); border-radius: 10px; padding: 20px 24px; display: flex; gap: 14px; }
+    .tip-label { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); margin-bottom: 6px; }
+    .tip-body { font-size: 14px; color: var(--cream2); line-height: 1.65; }
+
+    /* Budget Summary */
+    .budget-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .budget-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 18px 16px; text-align: center; }
+    .budget-tier { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--cream3); margin-bottom: 10px; }
+    .budget-amount { font-family: var(--serif); font-size: 24px; color: var(--gold2); margin-bottom: 4px; }
+    .budget-note { font-size: 11px; color: var(--cream3); }
+
+    /* Gradient palette */
+    .grad-beach { background: linear-gradient(140deg, #0b3d5c 0%, #0d6680 45%, #1a5e6a 100%); }
+    .grad-mountain { background: linear-gradient(140deg, #162b1a 0%, #2a5233 50%, #3d6e50 100%); }
+    .grad-city { background: linear-gradient(140deg, #1f1535 0%, #36216e 50%, #4d2f8a 100%); }
+    .grad-desert { background: linear-gradient(140deg, #4a2a0e 0%, #7a4a1a 50%, #9e6a2a 100%); }
+    .grad-forest { background: linear-gradient(140deg, #0b2218 0%, #174830 50%, #256842 100%); }
+    .grad-snow { background: linear-gradient(140deg, #162038 0%, #253a5c 50%, #3a5580 100%); }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .transport-grid { grid-template-columns: 1fr; }
+      .budget-summary { grid-template-columns: 1fr; }
+      .hotel-card { flex-direction: column; }
+      .hotel-examples { text-align: left; }
+      .detail-hero { height: 260px; padding: 20px 24px; }
+      .detail-content { padding: 28px 20px; }
+      .results-header { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── INPUT SCREEN ── -->
+<div id="screen-input" class="screen input-screen active">
+  <div class="logo">W A N D R</div>
+  <h1 class="hero-title">Find your next<br><em>great adventure</em></h1>
+  <p class="hero-subtitle">AI-powered travel recommendations · Personalised to your budget</p>
+
+  <div class="form-card">
+    <div class="form-grid">
+      <div class="field full">
+        <label>Total Budget (for all travellers)</label>
+        <div class="budget-wrap">
+          <select id="currency" class="currency-select">
+            <option value="INR" selected>₹ INR</option>
+            <option value="USD">$ USD</option>
+            <option value="EUR">€ EUR</option>
+            <option value="GBP">£ GBP</option>
+          </select>
+          <input type="number" id="budget" placeholder="e.g. 50000" min="100">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>No. of Travellers</label>
+        <select id="people">
+          <option value="1">1 person</option>
+          <option value="2" selected>2 people</option>
+          <option value="3">3 people</option>
+          <option value="4">4 people</option>
+          <option value="5">5 people</option>
+          <option value="6">6+ people</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Days Available</label>
+        <input type="number" id="days" placeholder="e.g. 7" min="1" max="90">
+      </div>
+
+      <div class="field full">
+        <label>Travelling From (Your City)</label>
+        <input type="text" id="origin" placeholder="e.g. Bengaluru, India" value="Bengaluru, India">
+      </div>
+    </div>
+
+    <button class="submit-btn" onclick="startSearch()">Find My Destinations →</button>
+    <div id="error-msg" class="error-msg"></div>
+  </div>
+</div>
+
+<!-- ── LOADING SCREEN ── -->
+<div id="screen-loading" class="screen loading-screen">
+  <div class="loading-gem">✦</div>
+  <div id="loading-text" class="loading-text">Analysing your preferences</div>
+  <div class="loading-dots">
+    <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+  </div>
+  <div class="loading-steps" id="loading-steps">
+    <div class="loading-step" id="step1">Calculating transport costs</div>
+    <div class="loading-step" id="step2">Researching hotels &amp; stays</div>
+    <div class="loading-step" id="step3">Finding top places &amp; restaurants</div>
+    <div class="loading-step" id="step4">Curating your recommendations</div>
+  </div>
+</div>
+
+<!-- ── RESULTS SCREEN ── -->
+<div id="screen-results" class="screen results-screen">
+  <div class="results-header">
+    <div>
+      <div class="results-eyebrow">Your personalised picks</div>
+      <h2 class="results-title">We found <span id="result-count">5</span> perfect destinations</h2>
+    </div>
+    <button class="back-btn" onclick="goTo('input')">← Modify Search</button>
+  </div>
+  <div class="cards-grid" id="cards-grid"></div>
+</div>
+
+<!-- ── DETAIL SCREEN ── -->
+<div id="screen-detail" class="screen detail-screen">
+  <!-- dynamically populated -->
+</div>
+
+<script>
+  const LOAD_MSGS = [
+    'Analysing your budget & preferences',
+    'Searching best destinations for you',
+    'Calculating real-time travel costs',
+    'Finding top hotels & experiences',
+    'Crafting your perfect itinerary'
+  ];
+  const SYM = { INR: '₹', USD: '$', EUR: '€', GBP: '£' };
+  const GRAD = { beach:'grad-beach', mountain:'grad-mountain', city:'grad-city', desert:'grad-desert', forest:'grad-forest', snow:'grad-snow' };
+
+  let loadTimer, stepTimers = [];
+  let destinations = [];
+  let inputs = {};
+
+  /* ── Navigation ── */
+  function goTo(name) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-' + name).classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /* ── Validation & search trigger ── */
+  function startSearch() {
+    const budget = document.getElementById('budget').value.trim();
+    const currency = document.getElementById('currency').value;
+    const people = document.getElementById('people').value;
+    const days = document.getElementById('days').value.trim();
+    const origin = document.getElementById('origin').value.trim();
+    const errEl = document.getElementById('error-msg');
+    errEl.style.display = 'none';
+
+    if (!budget || Number(budget) < 1)  { showErr('Please enter a valid budget.'); return; }
+    if (!days   || Number(days)   < 1)  { showErr('Please enter the number of days.'); return; }
+    if (!origin)                         { showErr('Please enter your city / origin.'); return; }
+
+    inputs = { budget, currency, people, days, origin };
+    goTo('loading');
+    startLoaders();
+    fetchRecs(budget, currency, people, days, origin)
+      .then(dests => {
+        destinations = dests;
+        renderCards(dests);
+        stopLoaders();
+        goTo('results');
+      })
+      .catch(err => {
+        stopLoaders();
+        goTo('input');
+        showErr('Oops — ' + (err.message || 'Something went wrong. Please try again.'));
+      });
+  }
+
+  function showErr(msg) {
+    const el = document.getElementById('error-msg');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  /* ── Loading animation ── */
+  function startLoaders() {
+    let i = 0;
+    const txtEl = document.getElementById('loading-text');
+    txtEl.textContent = LOAD_MSGS[0];
+    loadTimer = setInterval(() => {
+      i = (i + 1) % LOAD_MSGS.length;
+      txtEl.style.opacity = '0';
+      setTimeout(() => { txtEl.textContent = LOAD_MSGS[i]; txtEl.style.opacity = '1'; }, 280);
+    }, 2600);
+    const steps = ['step1','step2','step3','step4'];
+    steps.forEach((id, idx) => {
+      stepTimers.push(setTimeout(() => {
+        document.getElementById(id).classList.add('done');
+      }, (idx + 1) * 2200));
+    });
+  }
+
+  function stopLoaders() {
+    clearInterval(loadTimer);
+    stepTimers.forEach(t => clearTimeout(t));
+    stepTimers = [];
+    ['step1','step2','step3','step4'].forEach(id => {
+      document.getElementById(id).classList.remove('done');
+    });
+  }
+
+  /* ── Claude API call ── */
+  async function fetchRecs(budget, currency, people, days, origin) {
+    const sym = SYM[currency] || '₹';
+
+    const system = `You are an expert travel planner with deep knowledge of global destinations, transport costs, and accommodation pricing. You always return ONLY valid raw JSON — no markdown fences, no preamble, no explanation.
+
+Return exactly this JSON shape:
+{
+  "destinations": [
+    {
+      "id": "unique_slug",
+      "name": "City or Place Name",
+      "country": "Country Name",
+      "tagline": "Evocative tagline max 8 words",
+      "description": "2-3 sentences on why this destination is special and unmissable.",
+      "tags": ["beach","culture"],
+      "gradient_type": "beach",
+      "transport": {
+        "flight": { "available": true, "cost_per_person": 4500, "duration": "1h 30m", "note": "Direct from origin" },
+        "train":  { "available": true, "cost_per_person": 850,  "duration": "14h",    "note": "Overnight sleeper" },
+        "bus":    { "available": true, "cost_per_person": 600,  "duration": "12h",    "note": "AC sleeper bus"   }
+      },
+      "hotels": {
+        "three_star": { "cost_per_night": 2500,  "examples": ["Hotel Name A", "Hotel Name B"] },
+        "four_star":  { "cost_per_night": 5000,  "examples": ["Hotel Name C", "Hotel Name D"] },
+        "five_star":  { "cost_per_night": 12000, "examples": ["Hotel Name E", "Hotel Name F"] }
+      },
+      "top_places": [
+        { "name": "Place Name", "type": "beach", "description": "One sentence why to visit.", "entry_fee": "Free" }
+      ],
+      "top_restaurants": [
+        { "name": "Restaurant Name", "cuisine": "Cuisine type", "price_range": "₹₹", "must_try": "Dish name", "rating": 4.3 }
+      ],
+      "best_season": "October to March",
+      "total_estimate": {
+        "budget_per_person": 15000,
+        "mid_range_per_person": 28000,
+        "luxury_per_person": 55000
+      },
+      "insider_tip": "One specific, practical, memorable travel tip."
+    }
+  ]
+}
+
+Rules:
+- Return exactly 5 destinations with variety (nature, culture, beach, adventure, etc.)
+- top_places: exactly 5 items
+- top_restaurants: exactly 5 items
+- gradient_type must be one of: beach, mountain, city, desert, forest, snow
+- All monetary values in ${currency}
+- transport costs = per person, one way
+- hotel costs = per room per night
+- Round-trip transport + ${days} nights hotel should be feasible within ${sym}${budget} total for ${people} people
+- Mix domestic and international destinations if budget allows
+- Be realistic with current 2025 market pricing
+- If a transport mode is not realistic for the route, set available: false`;
+
+    const userMsg = `Budget: ${sym}${budget} total for ${people} traveller(s). Origin: ${origin}. Duration: ${days} days. Recommend 5 great destinations.`;
+
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        system,
+        messages: [{ role: 'user', content: userMsg }]
+      })
+    });
+
+    if (!resp.ok) {
+      const e = await resp.json().catch(() => ({}));
+      throw new Error(e?.error?.message || `API error ${resp.status}`);
+    }
+
+    const data = await resp.json();
+    const raw = data.content[0].text.trim()
+      .replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/\s*```$/,'').trim();
+    const parsed = JSON.parse(raw);
+    if (!parsed.destinations || !Array.isArray(parsed.destinations)) throw new Error('Unexpected response format.');
+    return parsed.destinations;
+  }
+
+  /* ── Render helpers ── */
+  function fmt(amount) {
+    const sym = SYM[inputs.currency] || '₹';
+    return sym + Number(amount).toLocaleString('en-IN');
+  }
+
+  function gradClass(type) { return GRAD[type] || 'grad-city'; }
+
+  /* ── Render cards ── */
+  function renderCards(dests) {
+    document.getElementById('result-count').textContent = dests.length;
+    document.getElementById('cards-grid').innerHTML = dests.map((d, i) => `
+      <div class="dest-card" onclick="showDetail(${i})">
+        <div class="card-hero">
+          <div class="card-hero-bg ${gradClass(d.gradient_type)}"></div>
+          <div class="card-overlay"></div>
+          <div class="card-country-badge">${d.country}</div>
+        </div>
+        <div class="card-body">
+          <div class="card-name">${d.name}</div>
+          <div class="card-tagline">${d.tagline}</div>
+          <div class="card-tags">${(d.tags||[]).slice(0,3).map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+          <div class="card-footer">
+            <span class="card-hint">Click to see prices &amp; details</span>
+            <button class="explore-btn">Explore →</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  /* ── Detail view ── */
+  function showDetail(idx) {
+    const d = destinations[idx];
+    const days = Number(inputs.days) || 1;
+
+    function tCard(icon, label, t) {
+      if (!t || !t.available) return `
+        <div class="transport-card transport-na">
+          <div class="transport-icon">${icon}</div>
+          <div class="transport-mode">${label}</div>
+          <div class="transport-cost" style="font-size:14px;color:var(--cream3)">Not available</div>
+        </div>`;
+      return `
+        <div class="transport-card">
+          <div class="transport-icon">${icon}</div>
+          <div class="transport-mode">${label}</div>
+          <div class="transport-cost">${fmt(t.cost_per_person)}</div>
+          <div class="transport-duration">${t.duration}</div>
+          <div class="transport-note">${t.note||''}</div>
+        </div>`;
+    }
+
+    function hCard(h) {
+      return `
+        <div class="hotel-card">
+          <div>
+            <div class="hotel-label">Per room · per night</div>
+            <div class="hotel-amount">${fmt(h.cost_per_night)}</div>
+            <div class="hotel-nights">${days} nights ≈ ${fmt(h.cost_per_night * days)}</div>
+          </div>
+          <div class="hotel-examples">
+            <div class="hotel-examples-label">Example hotels</div>
+            ${(h.examples||[]).map(e=>`<div class="hotel-example">${e}</div>`).join('')}
+          </div>
+        </div>`;
+    }
+
+    const detailEl = document.getElementById('screen-detail');
+    detailEl.innerHTML = `
+      <div class="detail-hero ${gradClass(d.gradient_type)}">
+        <div class="detail-hero-overlay"></div>
+        <button class="back-btn detail-hero-back" onclick="goTo('results')">← All Destinations</button>
+        <div class="detail-hero-content">
+          <div class="detail-country">${d.country}</div>
+          <div class="detail-name">${d.name}</div>
+          <div class="detail-tagline">${d.tagline}</div>
+        </div>
+      </div>
+
+      <div class="detail-content">
+        <div class="season-pill">✦ Best time to visit: ${d.best_season}</div>
+        <p class="desc-text">${d.description}</p>
+
+        <!-- Transport -->
+        <div class="detail-section">
+          <h3 class="section-head">Transportation <em style="font-family:var(--sans);font-size:14px;font-weight:300;color:var(--cream3);font-style:normal">(per person · one way)</em></h3>
+          <div class="transport-grid">
+            ${tCard('✈', 'Flight', d.transport.flight)}
+            ${tCard('🚂', 'Train',  d.transport.train)}
+            ${tCard('🚌', 'Bus',    d.transport.bus)}
+          </div>
+        </div>
+
+        <!-- Hotels -->
+        <div class="detail-section">
+          <h3 class="section-head">Accommodation <em style="font-family:var(--sans);font-size:14px;font-weight:300;color:var(--cream3);font-style:normal">(per room · per night)</em></h3>
+          <div class="hotel-tabs">
+            <button class="hotel-tab active" onclick="switchHotel('three_star',this)">★★★ Three Star</button>
+            <button class="hotel-tab"        onclick="switchHotel('four_star',this)">★★★★ Four Star</button>
+            <button class="hotel-tab"        onclick="switchHotel('five_star',this)">★★★★★ Five Star</button>
+          </div>
+          <div id="hotel-display">${hCard(d.hotels.three_star)}</div>
+        </div>
+
+        <!-- Budget Estimate -->
+        <div class="detail-section">
+          <h3 class="section-head">Estimated total per person</h3>
+          <div class="budget-summary">
+            <div class="budget-card">
+              <div class="budget-tier">Budget</div>
+              <div class="budget-amount">${fmt(d.total_estimate.budget_per_person)}</div>
+              <div class="budget-note">3★ hotels · bus/train</div>
+            </div>
+            <div class="budget-card">
+              <div class="budget-tier">Mid Range</div>
+              <div class="budget-amount">${fmt(d.total_estimate.mid_range_per_person)}</div>
+              <div class="budget-note">4★ hotels · flight</div>
+            </div>
+            <div class="budget-card">
+              <div class="budget-tier">Luxury</div>
+              <div class="budget-amount">${fmt(d.total_estimate.luxury_per_person)}</div>
+              <div class="budget-note">5★ hotels · business class</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top Places -->
+        <div class="detail-section">
+          <h3 class="section-head">Top Places to Visit</h3>
+          <div class="list-items">
+            ${(d.top_places||[]).map((p,i)=>`
+              <div class="list-item">
+                <div class="item-num">${i+1}</div>
+                <div class="item-body">
+                  <div class="item-name">${p.name}</div>
+                  <div class="item-desc">${p.description}</div>
+                </div>
+                <div class="item-meta">
+                  <div class="item-badge">${p.type}</div>
+                  <div class="item-fee">${p.entry_fee}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Restaurants -->
+        <div class="detail-section">
+          <h3 class="section-head">Best Restaurants</h3>
+          <div class="list-items">
+            ${(d.top_restaurants||[]).map((r,i)=>`
+              <div class="list-item">
+                <div class="item-num">${i+1}</div>
+                <div class="item-body">
+                  <div class="item-name">${r.name}</div>
+                  <div class="item-desc">${r.cuisine}</div>
+                  <div class="item-try">Try: ${r.must_try}</div>
+                </div>
+                <div class="item-meta">
+                  <div class="item-rating">★ ${r.rating}</div>
+                  <div class="item-price">${r.price_range}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Insider tip -->
+        <div class="insider-box">
+          <div>
+            <div class="tip-label">Insider Tip</div>
+            <div class="tip-body">${d.insider_tip}</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    window._dest = d;
+    window._days = days;
+    goTo('detail');
+  }
+
+  function switchHotel(type, btn) {
+    document.querySelectorAll('.hotel-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    const h = window._dest.hotels[type];
+    const days = window._days;
+    document.getElementById('hotel-display').innerHTML = `
+      <div class="hotel-card">
+        <div>
+          <div class="hotel-label">Per room · per night</div>
+          <div class="hotel-amount">${fmt(h.cost_per_night)}</div>
+          <div class="hotel-nights">${days} nights ≈ ${fmt(h.cost_per_night * days)}</div>
+        </div>
+        <div class="hotel-examples">
+          <div class="hotel-examples-label">Example hotels</div>
+          ${(h.examples||[]).map(e=>`<div class="hotel-example">${e}</div>`).join('')}
+        </div>
+      </div>`;
+  }
+</script>
+</body>
+</html>

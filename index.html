@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Travel Planner</title>
+</head>
+
+<body style="font-family: Arial; background:#f5f7fa; padding:30px;">
+
+<h2>Travel Planner</h2>
+
+<div style="background:white; padding:15px; border-radius:8px; width:260px; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+
+  <input id="city" placeholder="Enter any city" style="width:100%; padding:6px; margin-bottom:8px;"><br>
+  <input id="days" placeholder="Days" type="number" style="width:100%; padding:6px; margin-bottom:8px;"><br>
+  <input id="people" placeholder="People" type="number" style="width:100%; padding:6px; margin-bottom:10px;"><br>
+
+  <button onclick="runEngine()" style="width:100%; padding:8px;">Get Recommendations</button>
+
+</div>
+
+<br>
+
+<h3 id="insight"></h3>
+
+<div id="results" style="display:flex; flex-wrap:wrap; gap:12px;"></div>
+
+<h3 id="exploreTitle"></h3>
+<div id="exploreResults" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+
+<script>
+let currentData = [];
+
+// -------- ENGINE --------
+
+async function runEngine() {
+  const cityVal = city.value;
+  const peopleVal = Number(people.value);
+  const daysVal = Number(days.value);
+
+  let res1 = await fetch("/step1", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ city: cityVal, people: peopleVal })
+  });
+  let step1 = await res1.json();
+
+  if (step1.error) {
+    alert(step1.error);
+    return;
+  }
+
+  let res2 = await fetch("/step2", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ data: step1, days: daysVal })
+  });
+  let step2 = await res2.json();
+
+  let res3 = await fetch("/step3", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ data: step2, days: daysVal })
+  });
+  let final = await res3.json();
+
+  currentData = final;
+  render(final, peopleVal);
+  generateInsight(final);
+
+  exploreResults.innerHTML = "";
+  exploreTitle.innerText = "";
+}
+
+// -------- INSIGHT --------
+
+function generateInsight(data) {
+  if (data.length < 2) return;
+
+  const a = data[0];
+  const b = data[1];
+
+  const timeDiff = b.bestTime - a.bestTime;
+  const costDiff = a.bestCost - b.bestCost;
+
+  let msg = `${a.name} better than ${b.name}`;
+
+  if (timeDiff > 0) msg += ` (saves ${timeDiff} hrs)`;
+  if (costDiff > 0) msg += ` but costs ₹${costDiff} more`;
+
+  insight.innerText = msg;
+}
+
+// -------- RENDER --------
+
+function render(data, people) {
+  let html = "";
+
+  data.forEach((r,i) => {
+    html += card(`${i+1}. ${r.name}`, r, people, i === 0);
+  });
+
+  results.innerHTML = html;
+}
+
+// -------- COLOR --------
+
+function getColor(temp) {
+  if (temp == null) return "white";
+  if (temp < 20) return "#d4edda";
+  if (temp <= 25) return "#fff3cd";
+  return "#f8d7da";
+}
+
+// -------- CARD WITH TABLE --------
+
+function card(title, r, people, highlight=false) {
+  return `
+    <div style="
+      background:${getColor(r.temperature)};
+      padding:10px;
+      border-radius:8px;
+      width:240px;
+      font-size:13px;
+      box-shadow:${highlight ? "0 3px 10px rgba(0,150,255,0.3)" : "0 1px 5px rgba(0,0,0,0.1)"};
+      border:${highlight ? "2px solid #0096ff" : "none"};
+    ">
+
+      <b>${title}</b><br><br>
+
+      <table style="width:100%; font-size:12px;">
+        <tr>
+          <td><b>Temp</b></td>
+          <td>${r.temperature ?? "--"}°C</td>
+        </tr>
+        <tr>
+          <td><b>Best mode</b></td>
+          <td>${r.bestMode}</td>
+        </tr>
+        <tr>
+          <td><b>Cost (${people})</b></td>
+          <td>₹${r.bestCost}</td>
+        </tr>
+        <tr>
+          <td><b>Time</b></td>
+          <td>${r.bestTime} hrs</td>
+        </tr>
+        <tr>
+          <td><b>Opinion</b></td>
+          <td>${r.reason}</td>
+        </tr>
+      </table>
+
+      <br>
+
+      <button onclick="explorePlace('${r.name}')">Explore</button>
+    </div>
+  `;
+}
+
+// -------- EXPLORE --------
+
+function explorePlace(name) {
+  let places = [
+    `Main market of ${name}`,
+    `Famous temple in ${name}`,
+    `Local viewpoint in ${name}`,
+    `Popular lake in ${name}`,
+    `Historic fort of ${name}`,
+    `City center of ${name}`,
+    `Best food street in ${name}`,
+    `Sunset point in ${name}`,
+    `Museum in ${name}`,
+    `Nearby nature spot`
+  ];
+
+  exploreTitle.innerText = "Top places in " + name;
+
+  let html = "";
+  places.forEach(p => {
+    html += `<div style="background:white;padding:6px;border-radius:6px;">${p}</div>`;
+  });
+
+  exploreResults.innerHTML = html;
+}
+</script>
+
+</body>
+</html>

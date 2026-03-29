@@ -1,0 +1,32 @@
+[
+  { "name": "Coorg", "lat": 12.3375, "lon": 75.8069, "flightFactor": 1.3, "idealDays": 3 },
+  { "name": "Chikmagalur", "lat": 13.3161, "lon": 75.7720, "flightFactor": 1.3, "idealDays": 3 },
+  { "name": "Hampi", "lat": 15.3350, "lon": 76.4600, "flightFactor": 1.2, "idealDays": 2 },
+  { "name": "Gokarna", "lat": 14.5479, "lon": 74.3188, "flightFactor": 1.2, "idealDays": 3 },
+
+  { "name": "Munnar", "lat": 10.0889, "lon": 77.0595, "flightFactor": 1.3, "idealDays": 3 },
+  { "name": "Alleppey", "lat": 9.4981, "lon": 76.3388, "flightFactor": 1.1, "idealDays": 2 },
+  { "name": "Wayanad", "lat": 11.6854, "lon": 76.1320, "flightFactor": 1.3, "idealDays": 3 },
+
+  { "name": "Ooty", "lat": 11.4064, "lon": 76.6932, "flightFactor": 1.2, "idealDays": 3 },
+  { "name": "Kodaikanal", "lat": 10.2381, "lon": 77.4892, "flightFactor": 1.2, "idealDays": 3 },
+
+  { "name": "Goa", "lat": 15.2993, "lon": 74.1240, "flightFactor": 0.8, "idealDays": 3 },
+
+  { "name": "Udaipur", "lat": 24.5854, "lon": 73.7125, "flightFactor": 0.9, "idealDays": 2 },
+  { "name": "Jaipur", "lat": 26.9124, "lon": 75.7873, "flightFactor": 0.9, "idealDays": 2 },
+
+  { "name": "Manali", "lat": 32.2432, "lon": 77.1892, "flightFactor": 1.3, "idealDays": 4 },
+  { "name": "Shimla", "lat": 31.1048, "lon": 77.1734, "flightFactor": 1.2, "idealDays": 3 },
+
+  { "name": "Rishikesh", "lat": 30.0869, "lon": 78.2676, "flightFactor": 1.1, "idealDays": 2 },
+
+  { "name": "Agra", "lat": 27.1767, "lon": 78.0081, "flightFactor": 0.9, "idealDays": 1 },
+  { "name": "Varanasi", "lat": 25.3176, "lon": 82.9739, "flightFactor": 0.9, "idealDays": 2 },
+
+  { "name": "Amritsar", "lat": 31.6340, "lon": 74.8723, "flightFactor": 0.9, "idealDays": 2 },
+
+  { "name": "Gangtok", "lat": 27.3389, "lon": 88.6065, "flightFactor": 1.4, "idealDays": 4 },
+
+  { "name": "Shillong", "lat": 25.5788, "lon": 91.8933, "flightFactor": 1.3, "idealDays": 3 }
+]
